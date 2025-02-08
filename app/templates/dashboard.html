@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2>Dashboard</h2>
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Account Details</h3>
+            <ul class="list-group">
+                <li class="list-group-item">Equity: {{ account.equity }}</li>
+                <li class="list-group-item">Buying Power: {{ account.buying_power }}</li>
+                <li class="list-group-item">Cash: {{ account.cash }}</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h3>Positions</h3>
+            <ul class="list-group">
+                {% for position in positions %}
+                <li class="list-group-item">
+                    {{ position.symbol }} - {{ position.qty }} shares
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <h3>Orders</h3>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Quantity</th>
+                        <th>Side</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.symbol }}</td>
+                        <td>{{ order.qty }}</td>
+                        <td>{{ order.side }}</td>
+                        <td>{{ order.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

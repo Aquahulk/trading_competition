@@ -1,0 +1,41 @@
+/* Hero Section */
+.hero-section {
+    background: linear-gradient(135deg, #007bff, #00bfff);
+    padding: 100px 0;
+}
+
+.hero-section h1 {
+    font-weight: 700;
+}
+
+.hero-section p {
+    font-size: 1.25rem;
+}
+
+/* Features Section */
+.features-section {
+    padding: 60px 0;
+}
+
+.feature-icon {
+    color: #007bff;
+}
+
+/* Countdown Section */
+.countdown-section {
+    padding: 60px 0;
+}
+
+#countdown {
+    font-weight: 700;
+}
+
+/* Highlights Section */
+.highlights-section {
+    padding: 60px 0;
+}
+
+.highlights-section img {
+    max-width: 100%;
+    height: auto;
+}

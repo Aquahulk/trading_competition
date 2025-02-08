@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container">
+    <h2>Tournaments</h2>
+    <div class="row">
+        {% for tournament in tournaments %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ tournament.name }}</h5>
+                    <p class="card-text">
+                        Start Date: {{ tournament.start_date }}<br>
+                        End Date: {{ tournament.end_date }}<br>
+                        Prize Pool: ${{ tournament.prize_pool }}
+                    </p>
+                    <a href="{{ url_for('tournament.join_tournament', tournament_id=tournament.id) }}" class="btn btn-primary">Join</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto">
+                <h1 class="display-3 animate__animated animate__fadeInDown">Welcome to the Trading Competition</h1>
+                <p class="lead animate__animated animate__fadeInUp animate__delay-1s">
+                    Join the ultimate trading challenge and showcase your skills. Compete with traders worldwide and win amazing prizes!
+                </p>
+                <div class="mt-4 animate__animated animate__fadeInUp animate__delay-2s">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-lg me-3">Get Started</a>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg">Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features-section py-5 bg-light">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-4 animate__animated animate__fadeInLeft">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-trophy fa-3x text-primary"></i>
+                </div>
+                <h3>Win Prizes</h3>
+                <p>Compete in daily, weekly, and monthly tournaments to win cash prizes and trophies.</p>
+            </div>
+            <div class="col-md-4 animate__animated animate__fadeInUp">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-chart-line fa-3x text-primary"></i>
+                </div>
+                <h3>Real-Time Trading</h3>
+                <p>Use our paper trading platform to practice and improve your trading strategies.</p>
+            </div>
+            <div class="col-md-4 animate__animated animate__fadeInRight">
+                <div class="feature-icon mb-3">
+                    <i class="fas fa-users fa-3x text-primary"></i>
+                </div>
+                <h3>Join the Community</h3>
+                <p>Connect with traders, share strategies, and learn from the best in the community.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Countdown Section -->
+<section class="countdown-section py-5 bg-dark text-white text-center">
+    <div class="container">
+        <h2 class="animate__animated animate__fadeIn">Next Tournament Starts In:</h2>
+        <div id="countdown" class="display-4 animate__animated animate__fadeIn animate__delay-1s">
+            <span id="days"></span>d <span id="hours"></span>h <span id="minutes"></span>m <span id="seconds"></span>s
+        </div>
+    </div>
+</section>
+
+<!-- Highlights Section -->
+<section class="highlights-section py-5">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 animate__animated animate__fadeInLeft">
+                <h2>Tournament Highlights</h2>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">💰 <strong>Prize Pool:</strong> $10,000</li>
+                    <li class="list-group-item">⏳ <strong>Duration:</strong> 7 Days</li>
+                    <li class="list-group-item">📜 <strong>Rules:</strong> No leverage, 8% daily drawdown limit</li>
+                </ul>
+            </div>
+            <div class="col-md-6 animate__animated animate__fadeInRight">
+                <img src="{{ url_for('static', filename='img/trading.jpg') }}" class="img-fluid rounded" alt="Trading">
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
