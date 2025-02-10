@@ -2,6 +2,13 @@
 {% block content %}
 <div class="container">
     <h2>Dashboard</h2>
+
+    {% if is_suspended %}
+        <div class="alert alert-danger">
+            Your account is suspended due to exceeding the daily drawdown limit.
+        </div>
+    {% endif %}
+
     <div class="row">
         <div class="col-md-6">
             <h3>Account Details</h3>
@@ -9,6 +16,8 @@
                 <li class="list-group-item">Equity: {{ account.equity }}</li>
                 <li class="list-group-item">Buying Power: {{ account.buying_power }}</li>
                 <li class="list-group-item">Cash: {{ account.cash }}</li>
+                <li class="list-group-item">Realized P/L: {{ realized_pl }}%</li>
+                <li class="list-group-item">Unrealized P/L: {{ unrealized_pl }}%</li>
             </ul>
         </div>
         <div class="col-md-6">
@@ -22,6 +31,7 @@
             </ul>
         </div>
     </div>
+
     <div class="row mt-4">
         <div class="col-md-12">
             <h3>Orders</h3>
@@ -47,5 +57,13 @@
             </table>
         </div>
     </div>
+
+    {% if not is_suspended %}
+    <form action="{{ url_for('main.place_order') }}" method="post">
+        <button type="submit" class="btn btn-primary">Place Order</button>
+    </form>
+    {% else %}
+    <p class="text-danger">Trading is currently disabled due to exceeding the drawdown limit.</p>
+    {% endif %}
 </div>
 {% endblock %}

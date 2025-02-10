@@ -1,14 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, jsonify
-from flask_login import login_user, current_user, logout_user, login_required
-from app.services.alpaca_service import AlpacaService
-from app.models import User, Tournament, Trade
-from app.forms import RegistrationForm, LoginForm, TournamentForm, TradeForm
+from flask import render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Blueprint
 from app import db
-from dotenv import load_dotenv
+from app.models import User, Tournament, Order
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import login_user, logout_user, login_required, current_user
+from datetime import datetime, timedelta
+from app.forms import LoginForm 
 
-load_dotenv()
-
-# Define Blueprints
+# Create Blueprints for different route groups
 main_routes = Blueprint('main', __name__)
 auth_routes = Blueprint('auth', __name__)
 tournament_routes = Blueprint('tournament', __name__)
@@ -16,83 +15,151 @@ profile_routes = Blueprint('profile', __name__)
 chat_routes = Blueprint('chat', __name__)
 admin_routes = Blueprint('admin', __name__)
 
-# Main Routes
+# --------------------- HOME ROUTE ---------------------
 @main_routes.route('/')
 def home():
     return render_template('index.html')
 
+# --------------------- USER REGISTRATION ---------------------
+@auth_routes.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        if User.query.filter_by(username=username).first():
+            flash('Username already exists', 'danger')
+            return redirect(url_for('auth.register'))
+        
+        new_user = User(username=username, password_hash=generate_password_hash(password))
+        db.session.add(new_user)
+        db.session.commit()
+        
+        flash('Registration successful! Please log in.', 'success')
+        return redirect(url_for('auth.login'))
+    
+    return render_template('register.html')
+
+# --------------------- USER LOGIN ---------------------
+@auth_routes.route('/login', methods=['GET', 'POST'])
+def login():
+    form = LoginForm()  # ✅ Create a form instance
+
+    if request.method == 'POST' and form.validate_on_submit():
+        user = User.query.filter_by(email=form.email.data).first()  # ✅ Correct
+        
+        if user and check_password_hash(user.password_hash, form.password.data):
+            login_user(user)
+            flash('Login successful!', 'success')
+            return redirect(url_for('main.dashboard'))
+        else:
+            flash('Invalid username or password', 'danger')
+    
+    return render_template('login.html', form=form)  # ✅ Pass 'form' to templat
+# --------------------- USER LOGOUT ---------------------
+@auth_routes.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('auth.login'))
+
+# --------------------- USER DASHBOARD ---------------------
 @main_routes.route('/dashboard')
 @login_required
 def dashboard():
-    alpaca = AlpacaService()
-    account = alpaca.get_account()
-    positions = alpaca.get_positions()
-    orders = alpaca.get_orders()
-    portfolio_history = alpaca.get_portfolio_history()
+    # Fetch user's account details (Modify based on your database schema)
+    account = current_user.account if hasattr(current_user, 'account') else None
 
-    return render_template('dashboard.html', account=account, positions=positions, orders=orders, portfolio_history=portfolio_history)
+    return render_template('dashboard.html', user=current_user, account=account)  # ✅ Correct indentation
 
-# Auth Routes
-@auth_routes.route('/register', methods=['GET', 'POST'])
-def register():
-    form = RegistrationForm()
-    if form.validate_on_submit():
-        user = User(username=form.username.data, email=form.email.data, password=form.password.data)  # No bcrypt hashing
-        db.session.add(user)
+
+# --------------------- TOURNAMENT PAGE ---------------------
+@tournament_routes.route('/tournament')
+@login_required
+def tournament():
+    tournament = Tournament.query.all()
+    return render_template('tournament.html', tournament=tournament)
+
+# --------------------- 8% DAILY DRAWDOWN RULE ---------------------
+def check_drawdown(user):
+    today = datetime.utcnow().date()
+    orders = Order.query.filter_by(user_id=user.id).filter(Order.date >= today).all()
+
+    if not orders:
+        return False  # No trades today
+
+    start_balance = user.starting_balance
+    current_balance = start_balance
+
+    for order in orders:
+        current_balance += order.profit_or_loss()
+
+    drawdown = ((start_balance - current_balance) / start_balance) * 100
+
+    if drawdown >= 8:  # 8% drawdown exceeded
+        user.suspended = True
         db.session.commit()
-        flash('Your account has been created! You are now able to log in', 'success')
-        return redirect(url_for('auth.login'))
-    return render_template('register.html', form=form)
+        return True
 
-@auth_routes.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and user.password == form.password.data:  # No bcrypt checking
-            login_user(user, remember=form.remember.data)
-            return redirect(url_for('main.dashboard'))
-        else:
-            flash('Login Unsuccessful. Please check email and password', 'danger')
-    return render_template('login.html', form=form)
+    return False
 
-@auth_routes.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('main.home'))
-
-# Tournament Routes
-@tournament_routes.route('/tournaments')
+# --------------------- ORDER PLACEMENT ---------------------
+@main_routes.route('/place_order', methods=['POST'])
 @login_required
-def tournaments():
-    tournaments = Tournament.query.all()
-    return render_template('tournament.html', tournaments=tournaments)
+def place_order():
+    if current_user.suspended:
+        return jsonify({'error': 'You have exceeded the 8% daily drawdown and are suspended for the day'}), 403
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data received'}), 400
+    
+    required_fields = ['symbol', 'order_type', 'quantity', 'price']
+    for field in required_fields:
+        if field not in data:
+            return jsonify({'error': f'Missing field: {field}'}), 400
 
-@tournament_routes.route('/join_tournament/<int:tournament_id>', methods=['POST'])
-@login_required
-def join_tournament(tournament_id):
-    tournament = Tournament.query.get_or_404(tournament_id)
-    current_user.tournaments.append(tournament)
+    new_order = Order(
+        user_id=current_user.id,
+        symbol=data['symbol'],
+        order_type=data['order_type'],
+        quantity=data['quantity'],
+        price=data['price'],
+        date=datetime.utcnow()
+    )
+
+    db.session.add(new_order)
     db.session.commit()
-    flash('You have joined the tournament!', 'success')
-    return redirect(url_for('tournament.tournaments'))
 
-# Profile Routes
+    # Check if drawdown rule is violated
+    if check_drawdown(current_user):
+        return jsonify({'message': 'Order placed, but you have been suspended due to 8% drawdown'}), 403
+
+    return jsonify({'message': 'Order placed successfully'}), 201
+
+# --------------------- VIEW ORDER HISTORY ---------------------
+@main_routes.route('/order_history')
+@login_required
+def order_history():
+    orders = Order.query.filter_by(user_id=current_user.id).all()
+    return render_template('order_history.html', orders=orders)
+
+# --------------------- ADMIN: VIEW ALL USERS ---------------------
+@admin_routes.route('/admin/users')
+@login_required
+def view_users():
+    if not current_user.is_admin:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    users = User.query.all()
+    return render_template('users.html', users=users)
+
 @profile_routes.route('/profile')
 @login_required
 def profile():
-    return render_template('profile.html')
+    return render_template('profile.html', user=current_user)
 
-# Chat Routes
 @chat_routes.route('/chat')
-@login_required
 def chat():
     return render_template('chat.html')
-
-# Admin Routes
-@admin_routes.route('/admin')
-@login_required
-def admin():
-    if not current_user.is_admin:
-        return redirect(url_for('main.home'))
-    return render_template('admin.html')
